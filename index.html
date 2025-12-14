@@ -20,28 +20,36 @@
 </head>
 <body>
   <div class="controls" aria-hidden="false">
-    <div class="controls-row">
-      <button id="addFish">Tambah Ikan</button>
-      <button id="removeFish">Kurangi Ikan</button>
+    <!-- Kontrol disusun ke dalam 3 grup: left / center / right -->
+    <div class="controls-inner">
+      <div class="group group-left">
+        <button id="addFish" class="primary">Tambah Ikan</button>
+        <button id="removeFish">Kurangi Ikan</button>
 
-      <!-- Desktop: range control (visible on wide screens) -->
-      <label class="range desktop-only" aria-hidden="false">
-        <span>Jumlah: </span>
-        <input id="fishCount" type="range" min="1" max="40" value="12">
-        <output id="fishCountOut">12</output>
-      </label>
+        <!-- Desktop range -->
+        <label class="range desktop-only" aria-hidden="false">
+          <span class="label">Jumlah</span>
+          <input id="fishCount" type="range" min="1" max="40" value="12">
+          <output id="fishCountOut">12</output>
+        </label>
 
-      <!-- Mobile-friendly fish count controls (visible on small screens) -->
-      <div class="fish-count mobile-only" aria-hidden="true" title="Jumlah ikan">
-        <button id="fishMinus" class="small">−</button>
-        <div id="fishCountDisplay" class="count">12</div>
-        <button id="fishPlus" class="small">+</button>
+        <!-- Mobile +/- controls -->
+        <div class="fish-count mobile-only" aria-hidden="true" title="Jumlah ikan">
+          <button id="fishMinus" class="small">−</button>
+          <div id="fishCountDisplay" class="count">12</div>
+          <button id="fishPlus" class="small">+</button>
+        </div>
       </div>
 
-      <button id="addFoodBtn">Tambah Makanan</button>
+      <div class="group group-center">
+        <button id="addFoodBtn" class="accent">Tambah Makanan</button>
+        <button id="toggleBubbles" class="wrap">Gelembung: On</button>
+      </div>
 
-      <!-- Ensure bubble toggle text wraps instead of being cut off -->
-      <button id="toggleBubbles" class="wrap">Gelembung: On</button>
+      <div class="group group-right">
+        <!-- spare area: bisa ditaruh info / tombol lain -->
+        <div class="spacer" aria-hidden="true"></div>
+      </div>
     </div>
   </div>
 
@@ -52,7 +60,6 @@
 
     <!-- Plants & Corals & Decorations (foreground) -->
     <div class="plants" aria-hidden="true">
-      <!-- plants / corals / decorations (same as before) -->
       <svg class="plant p1" viewBox="0 0 200 200" preserveAspectRatio="xMidYMax slice">
         <path d="M30,200 C40,150 50,120 60,90 C76,50 86,70 96,90 C106,110 112,140 130,170" fill="none" stroke="#114e30" stroke-width="6" stroke-linecap="round"/>
       </svg>

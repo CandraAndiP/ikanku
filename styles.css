@@ -8,54 +8,86 @@
   --control-padding: 10px;
 }
 
+/* Base */
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; -webkit-tap-highlight-color: rgba(0,0,0,0)}
+button{cursor:pointer}
+
+/* Controls container */
 .controls{
-  position:fixed; z-index:160; left:12px; right:12px; top:auto; bottom:12px;
-  display:flex; gap:var(--control-gap); align-items:center;
+  position:fixed; z-index:160; left:12px; right:12px; bottom:12px;
+  display:flex; align-items:center;
   background:var(--control-bg); padding:var(--control-padding); border-radius:12px; color:#fff;
   backdrop-filter: blur(6px); border:1px solid rgba(255,255,255,0.05);
-  /* make controls wrap and not be clipped on small screens */
-  flex-wrap:wrap;
-  justify-content:space-between;
-  max-width: calc(100% - 24px);
   box-shadow: 0 6px 18px rgba(3,12,30,0.35);
-  /* safe area for iOS bottom inset */
   padding-bottom: calc(var(--control-padding) + env(safe-area-inset-bottom));
 }
 
-/* row container to keep related controls together */
-.controls-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-
-/* buttons */
-.controls button{
-  padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06);
-  background:transparent; color:inherit; cursor:pointer; font-size:14px;
-  white-space:normal; /* allow wrapping text when needed */
-  min-width:44px;
+/* inner wrapper: 3 groups layout */
+.controls-inner{
+  width:100%;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
 }
 
-/* small square buttons for + / - */
-button.small{ padding:6px 10px; min-width:36px; font-size:18px; line-height:1; }
+/* groups */
+.group{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+}
 
-/* fish count (mobile) */
+/* make center group centered and not too wide */
+.group-center{ justify-content:center; flex: 0 1 auto; }
+
+/* left group can shrink */
+.group-left{ flex: 1 1 auto; min-width:0; align-items:center; }
+
+/* right group reserved */
+.group-right{ flex: 0 0 auto; align-items:center; }
+
+/* Buttons */
+.controls button{
+  padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06);
+  background:transparent; color:inherit; font-size:14px;
+  white-space:nowrap; min-width:44px; box-shadow: none;
+}
+.controls button.primary{ background: linear-gradient(180deg, #3aa7ff, #1f74d0); border: none; color: #fff; }
+.controls button.accent{ background: linear-gradient(180deg, #ffd37a, #ff9f3b); border: none; color:#16222a; }
+
+/* wrapable toggle: allow multi-line but keep padding */
+.controls button.wrap{ max-width:140px; white-space:normal; text-align:center; padding:8px 10px }
+
+/* small square buttons */
+button.small{ padding:6px 10px; min-width:36px; font-size:18px; line-height:1; border-radius:8px; }
+
+/* fish count mobile style */
 .fish-count{ display:flex; align-items:center; gap:6px; background: rgba(255,255,255,0.02); padding:4px 6px; border-radius:8px; }
 .fish-count .count{ min-width:36px; text-align:center; font-weight:600; font-size:15px; color:#fff; }
 
-/* desktop-only / mobile-only helpers */
-.desktop-only{ display:flex; align-items:center; gap:6px; }
+/* range styling (desktop) */
+.range{ display:flex; gap:8px; align-items:center; color:#fff; }
+.range input[type="range"]{ width:140px; height:28px; }
+
+/* helpers */
+.desktop-only{ display:flex; }
 .mobile-only{ display:none; }
 
-/* make toggle button wrap instead of being cut */
-.controls button.wrap{ max-width:160px; word-break:break-word; }
-
-/* hide range on very small screens; we'll use mobile +/- controls */
+/* Responsive: on narrow screens, rearrange & enlarge hit targets */
 @media (max-width:700px){
+  .controls{ left:8px; right:8px; bottom:12px; padding:12px; gap:10px; }
+  .group-left{ order:1; width:100%; justify-content:flex-start; }
+  .group-center{ order:2; width:100%; justify-content:center; margin-top:6px; }
+  .group-right{ order:3; width:100%; justify-content:flex-end; margin-top:6px; }
+
   .desktop-only{ display:none; }
   .mobile-only{ display:flex; }
-  .controls{ left:8px; right:8px; bottom:12px; padding:12px; gap:10px; }
-  .controls button{ padding:10px 12px; font-size:15px; }
-  .controls .range{ display:none; } /* redundant */
+  .controls button{ padding:10px 12px; font-size:15px; min-width:48px; }
+  .controls button.wrap{ max-width:100%; }
 }
 
 /* Aquarium container */
@@ -68,27 +100,24 @@ button.small{ padding:6px 10px; min-width:36px; font-size:18px; line-height:1; }
 /* canvases stacked */
 canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;}
 
-/* Plants (foreground) */
+/* foreground decorations (unchanged) */
 .plants{position:absolute; left:0; right:0; bottom:0; height:260px; pointer-events:none; z-index:150}
 .plant{position:absolute; bottom:6px; width:160px; height:220px; opacity:0.95}
 .p1{left:36px; transform: translateY(8px)}
 .p2{left:130px; transform: scaleX(0.9) translateY(2px)}
 
-/* Corals container */
 .corals{position:absolute; left:0; right:0; bottom:6px; height:200px; pointer-events:none; z-index:151; display:block}
 .coral{position:absolute; bottom:0; width:120px; height:120px; transform-origin:50% 100%;}
 .c1{left:220px; transform: translateY(4px) scale(1.05)}
 .c2{left:40px; transform: translateY(2px) scale(1.0)}
 .c3{right:120px; transform: translateY(6px) scale(0.95)}
 
-/* extra decorations */
 .decor{position:absolute; bottom:6px; width:80px; height:80px; transform-origin:50% 100%}
 .rock{left:320px; width:160px; height:80px; opacity:0.98; transform: translateY(2px) scale(1.0)}
 .shell{left:120px; width:52px; height:48px; transform: translateY(4px) scale(1.0)}
 .star{right:40px; width:42px; height:42px; transform: translateY(6px) scale(1.0)}
 .anemone{left:60px; width:84px; height:84px; transform: translateY(0px) scale(1.0)}
 
-/* coral sway animation */
 @keyframes sway {
   0% { transform: translateY(var(--ty,0px)) rotate(-1deg) }
   50% { transform: translateY(calc(var(--ty,0px) + 2px)) rotate(1deg) }
@@ -96,7 +125,6 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 }
 .coral { animation: sway 4.5s ease-in-out infinite; }
 
-/* small sparkle animation for anemone and shells */
 @keyframes pulse {
   0% { transform: scale(1) translateY(0) }
   50% { transform: scale(1.03) translateY(1px) }
@@ -104,23 +132,13 @@ canvas{position:absolute; left:0; top:0; width:100%; height:100%; display:block;
 }
 .anemone, .shell { animation: pulse 5s ease-in-out infinite; }
 
-/* sand at bottom via pseudo element */
+/* sand & vignette */
 .aquarium::after{
   content:""; pointer-events:none; position:absolute; left:0; right:0; bottom:0; height:72px; z-index:155;
   background: linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.12)), var(--sand);
   box-shadow: inset 0 20px 50px rgba(0,0,0,0.18);
 }
-
-/* soft vignette and glass reflection */
 .aquarium::before{
   content:""; pointer-events:none; position:absolute; inset:0; z-index:170;
   background: radial-gradient(60% 50% at 50% 20%, rgba(255,255,255,0.02), rgba(0,0,0,0.18) 70%);
-}
-
-/* small responsive tweaks */
-@media (max-width:600px){
-  .plant{width:100px; height:160px}
-  .coral{width:88px; height:88px}
-  .rock{left:260px; width:120px; height:64px}
-  .anemone{left:40px; width:64px; height:64px}
 }
