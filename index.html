@@ -2,11 +2,12 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>Akuarium Realistis — Dengan Hiasan & Makanan Acak</title>
+  <meta name="description" content="Akuarium interaktif yang ringan dan responsif untuk desktop & HP" />
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Google tag (gtag.js) -->
+<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-1Q2T6BLE0P"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -31,12 +32,13 @@
   </div>
 
   <main id="aquarium" class="aquarium" tabindex="0" aria-label="Akuarium realistis">
-    <canvas id="canvas-bg"></canvas>
-    <canvas id="canvas-main"></canvas>
-    <canvas id="canvas-ripples"></canvas>
+    <canvas id="canvas-bg" aria-hidden="true"></canvas>
+    <canvas id="canvas-main" aria-hidden="true"></canvas>
+    <canvas id="canvas-ripples" aria-hidden="true"></canvas>
 
     <!-- Plants & Corals & Decorations (foreground) -->
-    <div class="plants">
+    <div class="plants" aria-hidden="true">
+      <!-- existing SVGs / decorations are unchanged -->
       <svg class="plant p1" viewBox="0 0 200 200" preserveAspectRatio="xMidYMax slice">
         <path d="M30,200 C40,150 50,120 60,90 C76,50 86,70 96,90 C106,110 112,140 130,170" fill="none" stroke="#114e30" stroke-width="6" stroke-linecap="round"/>
       </svg>
@@ -44,8 +46,7 @@
         <path d="M40,200 C60,150 70,120 85,80 C100,40 110,65 125,95 C137,125 145,150 160,180" fill="none" stroke="#1b7a3e" stroke-width="5" stroke-linecap="round"/>
       </svg>
 
-      <!-- Corals (trumbu karang) -->
-      <div class="corals" aria-hidden="true">
+      <div class="corals">
         <svg class="coral c1" viewBox="0 0 120 120" preserveAspectRatio="xMidYMax slice">
           <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="6">
             <path d="M20 110 C28 85 28 70 36 54 C44 38 54 46 60 56 C66 66 72 78 84 86" stroke="#ff7aa7"/>
@@ -53,7 +54,6 @@
             <path d="M12 110 C18 90 20 80 24 66 C28 52 36 56 42 68" stroke="#ff91c1"/>
           </g>
         </svg>
-
         <svg class="coral c2" viewBox="0 0 140 120" preserveAspectRatio="xMidYMax slice">
           <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="6">
             <path d="M20 110 C28 88 40 78 54 66 C68 54 74 62 86 72 C98 82 110 96 126 102" stroke="#ffb36b"/>
@@ -61,7 +61,6 @@
             <path d="M6 110 C12 92 18 82 26 70" stroke="#ffd5a3"/>
           </g>
         </svg>
-
         <svg class="coral c3" viewBox="0 0 120 120" preserveAspectRatio="xMidYMax slice">
           <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="5">
             <path d="M90 110 C82 86 76 74 68 60 C60 46 54 50 46 56 C38 62 34 74 24 86" stroke="#8be0ff"/>
@@ -69,19 +68,16 @@
           </g>
         </svg>
 
-        <!-- Additional bottom decorations: rock, shell, starfish, anemone -->
+        <!-- additional decorations -->
         <svg class="decor rock" viewBox="0 0 120 60" preserveAspectRatio="xMidYMax slice">
           <ellipse cx="50" cy="36" rx="46" ry="18" fill="#6b5d4a" opacity="0.95"/>
         </svg>
-
         <svg class="decor shell" viewBox="0 0 60 60" preserveAspectRatio="xMidYMax slice">
           <path d="M6 42 C18 12 42 12 54 42 C36 30 24 30 6 42 Z" fill="#f0d6c2"/>
         </svg>
-
         <svg class="decor star" viewBox="0 0 60 60" preserveAspectRatio="xMidYMax slice">
           <polygon points="30,6 35,24 54,24 38,34 44,52 30,40 16,52 22,34 6,24 25,24" fill="#ffdf6b"/>
         </svg>
-
         <svg class="decor anemone" viewBox="0 0 80 80" preserveAspectRatio="xMidYMax slice">
           <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="3">
             <path d="M40 74 C34 60 30 50 28 40" stroke="#ff7aa7"/>

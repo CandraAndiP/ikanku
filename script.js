@@ -1,5 +1,8 @@
-// Akuarium Realistis - Canvas + Boids + Particles + Hiasan & makanan jatuh lebih lambat
-// Simpan sebagai script.js
+// Akuarium Realistis - Mobile-friendly improvements
+// - capped devicePixelRatio for mobile to reduce GPU/CPU
+// - touch support (tap to drop food)
+// - performance caps (max particles) and reduced defaults for small screens
+// - visibility pause to avoid wasting CPU when backgrounded
 
 const canvasBg = document.getElementById('canvas-bg');
 const canvasMain = document.getElementById('canvas-main');
@@ -16,37 +19,63 @@ const fishRange = document.getElementById('fishCount');
 const fishRangeOut = document.getElementById('fishCountOut');
 
 let W = 0, H = 0;
+let devicePR = Math.max(1, window.devicePixelRatio || 1);
+let isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 700;
+let DPR_CAP = isMobile ? 1.5 : 2; // cap on mobile to avoid huge offscreen buffers
+let DPR = Math.min(devicePR, DPR_CAP);
+let resizeTimeout = null;
 function resize() {
-  W = window.innerWidth; H = window.innerHeight;
-  [canvasBg, canvasMain, canvasRipples].forEach(c => {
-    c.width = W * devicePixelRatio;
-    c.height = H * devicePixelRatio;
-    c.style.width = W + 'px';
-    c.style.height = H + 'px';
-    c.getContext('2d').setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-  });
+  // debounce to avoid thrashing on mobile resize/rotation
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    W = window.innerWidth; H = window.innerHeight;
+    isMobile = /Mobi|Android/i.test(navigator.userAgent) || W < 700;
+    DPR_CAP = isMobile ? 1.5 : 2;
+    DPR = Math.min(window.devicePixelRatio || 1, DPR_CAP);
+    [canvasBg, canvasMain, canvasRipples].forEach(c => {
+      c.width = Math.max(1, Math.floor(W * DPR));
+      c.height = Math.max(1, Math.floor(H * DPR));
+      c.style.width = W + 'px';
+      c.style.height = H + 'px';
+      const cc = c.getContext('2d');
+      cc.setTransform(DPR,0,0,DPR,0,0);
+    });
+    // if mobile, reduce default fish count
+    if (isMobile && parseInt(fishRange.value,10) > 12) {
+      fishRange.value = 6;
+      fishRangeOut.value = 6;
+    }
+    // clamp existing fishes y positions
+    fishes.forEach(f => {
+      f.pos.y = clamp(f.pos.y, 40, H-120);
+      f.pos.x = clamp(f.pos.x, -60, W+60);
+    });
+  }, 80);
 }
 window.addEventListener('resize', resize);
 resize();
 
 // Settings
 let BUBBLES_ON = true;
-let CAUSTICS = true; // tetap aktif
+let CAUSTICS = true; // but trimmed on mobile
+let running = true;
 
 // Utility
 const rand = (a,b) => Math.random()*(b-a)+a;
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const dist = (a,b,c,d) => Math.hypot(a-c, b-d);
-const lerp = (a,b,t) => a + (b-a)*t;
 
-// Simulation lists
+// Simulation lists & caps
 let fishes = [];
 let bubbles = [];
 let foods = [];
 let ripples = [];
 let last = performance.now();
+const MAX_BUBBLES = isMobile ? 60 : 140;
+const MAX_FOODS = isMobile ? 8 : 18;
+const MAX_FISH = 40;
 
-// Colors / species
+// Colors / species (same)
 const SPECIES = [
   { body:'#ffb37a', accent:'#ff7a4d', size:1.0, speed:1.0 },
   { body:'#7fd3ff', accent:'#3faeea', size:0.9, speed:1.05 },
@@ -55,7 +84,7 @@ const SPECIES = [
   { body:'#8effa6', accent:'#3ecf7a', size:0.85, speed:1.2 },
 ];
 
-// Boid / Fish class
+// Fish class simplified (same as before but neighbor radius depends on screen)
 class Fish {
   constructor(x,y, species=null){
     this.pos = { x: x ?? rand(0, W), y: y ?? rand(50, H-150) };
@@ -69,7 +98,7 @@ class Fish {
     this.wagPhase = Math.random()*Math.PI*2;
     this.wagSpeed = rand(6,10);
     this.targetFood = null;
-    this.depth = rand(0.2, 1.0);
+    this.depth = rand(0.25, 1.0);
     this.age = 0;
     this.id = Math.random().toString(36).slice(2,9);
   }
@@ -93,7 +122,9 @@ class Fish {
         steerY += ny * this.speed * 1.8;
       }
     } else {
-      let neighRadius = 60 * this.depth * 1.6;
+      // neighbor radius scales with screen and mobile
+      let baseRadius = Math.max(40, Math.min(90, W * 0.08));
+      let neighRadius = baseRadius * (0.9 + this.depth * 1.1);
       let sepX=0, sepY=0, aliX=0, aliY=0, cohX=0, cohY=0;
       let count=0;
       for (let other of fishes) {
@@ -115,8 +146,8 @@ class Fish {
         aliX /= count; aliY /= count;
         cohX = (cohX / count - this.pos.x);
         cohY = (cohY / count - this.pos.y);
-        steerX += sepX * 120 + aliX * 0.8 + cohX * 0.6;
-        steerY += sepY * 120 + aliY * 0.8 + cohY * 0.6;
+        steerX += sepX * 120 + aliX * 0.75 + cohX * 0.6;
+        steerY += sepY * 120 + aliY * 0.75 + cohY * 0.6;
       }
       steerX += Math.cos(this.age*0.4 + this.wagPhase)*8;
       steerY += Math.sin(this.age*0.6 + this.wagPhase)*6;
@@ -189,9 +220,6 @@ class Fish {
     ctx.arc(8*scale+1*scale, -4*scale, 1.4*scale, 0, Math.PI*2);
     ctx.fill();
 
-    if (d < 0.5) {
-      ctx.globalAlpha *= 0.6;
-    }
     ctx.restore();
     ctx.globalAlpha = 1;
   }
@@ -199,7 +227,7 @@ class Fish {
   setTarget(food) { this.targetFood = food; }
 }
 
-// Bubble, Food, Ripple classes
+// Bubble, Food, Ripple classes (Food has slower fall & wobble)
 class Bubble {
   constructor(x,y,size=8, depth=0.8){
     this.x = x; this.y = y; this.r = size; this.depth = depth;
@@ -234,25 +262,22 @@ class Bubble {
 }
 
 class Food {
-  // vx optional horizontal drift at spawn
   constructor(x,y, vx = 0){
     this.x = x; this.y = y;
-    // lebih lambat jatuh; lebih acak dan sedikit horizontal drift
-    this.vy = rand(12, 28); // SLOWER fall speed (px/s)
-    this.vx = vx + rand(-8, 8); // random slight horizontal motion
-    this.wob = rand(0.6, 1.4); // small bobbing factor
+    // slower fall on mobile & more random
+    const baseSlow = isMobile ? rand(8,20) : rand(12,28);
+    this.vy = baseSlow;
+    this.vx = vx + rand(-8, 8);
+    this.wob = rand(0.6, 1.4);
     this.eaten = false;
     this.age = 0;
   }
   update(dt){
     this.age += dt;
     if (this.eaten) return;
-    // slight sinusoidal horizontal wobble + apply vx
-    this.x += this.vx * dt + Math.sin(this.age * 6) * (0.3 * this.wob) ;
+    this.x += this.vx * dt + Math.sin(this.age * 6) * (0.3 * this.wob);
     this.y += this.vy * dt;
-    // slow down horizontal drift over time (friction)
     this.vx *= 0.995;
-    // land on sand -> stop
     if (this.y > H - 80) {
       this.y = H - 80;
       this.vy = 0;
@@ -265,7 +290,6 @@ class Food {
     ctx.beginPath();
     ctx.ellipse(this.x, this.y, 4, 4.5, 0, 0, Math.PI*2);
     ctx.fill();
-    // tiny highlight
     ctx.fillStyle = 'rgba(255,255,255,0.12)';
     ctx.beginPath();
     ctx.ellipse(this.x-1, this.y-1, 1.1, 1.1, 0, 0, Math.PI*2);
@@ -297,16 +321,18 @@ class Ripple {
   }
 }
 
-// Simulation control and spawn helpers
+// spawn helpers with safe caps
 function spawnFish(n=1){
-  for (let i=0;i<n;i++){
-    const f = new Fish(rand(100, W-100), rand(60, H-200));
+  const allowed = Math.max(0, Math.min(n, MAX_FISH - fishes.length));
+  for (let i=0;i<allowed;i++){
+    const f = new Fish(rand(80, W-80), rand(60, H-200));
     fishes.push(f);
   }
 }
 
 function spawnBubble(x, y, size=10, depth=0.8){
   if (!BUBBLES_ON) return;
+  if (bubbles.length > (isMobile ? 80 : 180)) return;
   const b = new Bubble(x, y, size, depth);
   bubbles.push(b);
 }
@@ -317,51 +343,48 @@ function spawnBubbleCluster(x, y, count=6){
   }
 }
 
-// dropFood used by click & other spawners
 function dropFood(x,y, vx = 0){
+  if (foods.length >= (isMobile ? 8 : 18)) return;
   const f = new Food(x, y - 8, vx);
   foods.push(f);
-  spawnBubbleCluster(x, y, 6);
+  spawnBubbleCluster(x, y, 4);
 }
 
-// New: tombol "Tambah Makanan" action - jatuhkan beberapa pelet dari posisi ACak di atas
+// add-food button: now spawns from more random positions across top, staggered
 function addFoodButtonAction(){
-  const count = 6 + Math.floor(rand(0,4)); // 6-9 pellets
+  const count = 4 + Math.floor(rand(2,6)); // fewer on mobile
   for (let i=0;i<count;i++){
-    // lebih acak: sebar di area atas, seluruh lebar, dengan variasi horizontal dan vertikal
-    const x = clamp(rand(20, W-20) + (Math.random() < 0.3 ? rand(-80,80) : 0), 20, W-20);
+    const x = clamp(rand(20, W-20) + (Math.random() < 0.35 ? rand(-80,80) : 0), 20, W-20);
     const y = clamp(rand(H*0.06, H*0.18) + rand(-8,8), 12, H*0.25);
-    // give a small horizontal push sometimes
     const vx = rand(-18, 18);
-    // stagger spawn slightly
-    setTimeout(() => dropFood(x + rand(-16,16), y + rand(-6,6), vx), i * 120);
+    setTimeout(() => dropFood(x + rand(-16,16), y + rand(-6,6), vx), i * (isMobile ? 160 : 120));
   }
 }
 
-// Caustics background (simple moving pattern)
+// caustics: reduce complexity on mobile
 let causticOffset = 0;
 function drawCaustics(ctx, dt){
   if (!CAUSTICS) return;
   causticOffset += dt * 0.06;
   ctx.clearRect(0,0,W,H);
-  const bandCount = 8;
+  const bandCount = isMobile ? 4 : 8;
   ctx.save();
   ctx.globalCompositeOperation = 'overlay';
   for (let i=0;i<bandCount;i++){
-    const yAmp = 40 + 20*Math.sin(causticOffset + i);
+    const yAmp = (isMobile ? 24 : 40) + (isMobile ? 12 : 20)*Math.sin(causticOffset + i);
     ctx.beginPath();
     const base = (i / bandCount) * H;
-    for (let x=0;x<=W;x+=10){
-      const y = base + Math.sin((x*0.02) + causticOffset*1.4 + i) * yAmp;
+    for (let x=0;x<=W;x+= isMobile ? 18 : 10){
+      const y = base + Math.sin((x*(isMobile?0.01:0.02)) + causticOffset*1.4 + i) * yAmp;
       if (x===0) ctx.moveTo(x,y);
       else ctx.lineTo(x,y);
     }
-    const grad = ctx.createLinearGradient(0, base-100, 0, base+100);
+    const grad = ctx.createLinearGradient(0, base-80, 0, base+80);
     grad.addColorStop(0, 'rgba(255,255,255,0.02)');
-    grad.addColorStop(0.5, 'rgba(255,255,255,0.06)');
+    grad.addColorStop(0.5, 'rgba(255,255,255,0.05)');
     grad.addColorStop(1, 'rgba(255,255,255,0.01)');
     ctx.strokeStyle = grad;
-    ctx.lineWidth = 60 * (0.6 + (i/bandCount)*0.4);
+    ctx.lineWidth = (isMobile ? 36 : 60) * (0.6 + (i/bandCount)*0.4);
     ctx.stroke();
   }
   ctx.restore();
@@ -374,13 +397,26 @@ function drawCaustics(ctx, dt){
   ctx.restore();
 }
 
-// Main loop
+// pause when document not visible
+document.addEventListener('visibilitychange', () => {
+  running = !document.hidden;
+  if (!running) return;
+  last = performance.now();
+  requestAnimationFrame(step);
+});
+
+// main loop
 function step(now){
+  if (!running) {
+    requestAnimationFrame(step);
+    return;
+  }
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
 
   drawCaustics(ctxBg, dt);
 
+  // assign food targets
   for (const fish of fishes) {
     if (fish.targetFood && fish.targetFood.eaten) fish.targetFood = null;
   }
@@ -400,15 +436,19 @@ function step(now){
   foods.forEach(f => f.update(dt));
   ripples.forEach(r => r.update(dt));
 
+  // caps & cleanup
+  if (bubbles.length > (isMobile ? 80 : 180)) bubbles.splice(0, bubbles.length - (isMobile ? 80 : 180));
+  if (foods.length > (isMobile ? 10 : 20)) foods.splice(0, foods.length - (isMobile ? 10 : 20));
   bubbles = bubbles.filter(b => !b.dead);
   foods = foods.filter(f => !f.eaten);
   ripples = ripples.filter(r => r.alive);
 
   ctx.clearRect(0,0,W,H);
 
+  // fog layer
   ctx.save();
   const fog = ctx.createLinearGradient(0,0,0,H);
-  fog.addColorStop(0, 'rgba(255,255,255,0.025)');
+  fog.addColorStop(0, 'rgba(255,255,255,0.02)');
   fog.addColorStop(1, 'rgba(0,0,0,0.06)');
   ctx.fillStyle = fog;
   ctx.fillRect(0,0,W,H);
@@ -426,7 +466,7 @@ function step(now){
   fishes.forEach(f => {
     const r = 24 * f.size * (0.7 + f.depth);
     const g = ctx.createRadialGradient(f.pos.x, f.pos.y, 0, f.pos.x, f.pos.y, r*2);
-    g.addColorStop(0, 'rgba(255,255,255,0.04)');
+    g.addColorStop(0, 'rgba(255,255,255,0.03)');
     g.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = g;
     ctx.fillRect(f.pos.x - r*2, f.pos.y - r*2, r*4, r*4);
@@ -439,36 +479,52 @@ function step(now){
   requestAnimationFrame(step);
 }
 
-// Interaction: clicks drop food and create ripple
+// Interaction: touch & click support
 const aquarium = document.getElementById('aquarium');
+function handlePointerDrop(x, y) {
+  dropFood(x + rand(-6,6), y - 6 + rand(-6,6), rand(-12,12));
+  ripples.push(new Ripple(x, y));
+}
 aquarium.addEventListener('click', (e) => {
   const rect = aquarium.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
-  // when click, spawn pellet with even slower initial vy and small lateral push
-  dropFood(x + rand(-6,6), y - 6 + rand(-6,6), rand(-12,12));
-  ripples.push(new Ripple(x, y));
+  handlePointerDrop(x, y);
 });
+// touchstart (use passive:false for preventing default if needed)
+aquarium.addEventListener('touchstart', (ev) => {
+  if (!ev.touches || ev.touches.length === 0) return;
+  const t = ev.touches[0];
+  const rect = aquarium.getBoundingClientRect();
+  const x = t.clientX - rect.left;
+  const y = t.clientY - rect.top;
+  handlePointerDrop(x, y);
+}, { passive: true });
 
-// Add-food button: spawn several pellets from random top positions
-addFoodBtn.addEventListener('click', () => {
-  addFoodButtonAction();
-});
+// Add-food button action
+addFoodBtn.addEventListener('click', () => addFoodButtonAction());
 
-// spawn automatic bubble columns from bottom
+// automatic bubble columns, staggered, but lighter on mobile
 setInterval(() => {
   if (!BUBBLES_ON) return;
   const x = rand(30, W-30);
-  const cluster = Math.floor(rand(3,8));
+  const cluster = Math.floor(rand(isMobile ? 2 : 3, isMobile ? 5 : 8));
   spawnBubbleCluster(x, H-80, cluster);
 }, 1400 + Math.random()*1200);
 
-// initial population
+// initial population & defaults
 function init(){
-  spawnFish(parseInt(fishRange.value,10));
-  for (let i=0;i<30;i++){
+  // default fish count smaller on mobile
+  const defaultCount = isMobile ? 6 : parseInt(fishRange.value,10) || 12;
+  fishRange.value = defaultCount;
+  fishRangeOut.value = defaultCount;
+  spawnFish(defaultCount);
+  // lighter initial bubbles on mobile
+  const initialBubbles = isMobile ? 12 : 30;
+  for (let i=0;i<initialBubbles;i++){
     spawnBubble(rand(0,W), rand(H-60, H), rand(4, 18), rand(0.3, 1.0));
   }
+  last = performance.now();
   requestAnimationFrame(step);
 }
 init();
@@ -476,7 +532,7 @@ init();
 // UI bindings
 addBtn.addEventListener('click', () => {
   spawnFish(1);
-  fishRange.value = Math.min(40, parseInt(fishRange.value)+1);
+  fishRange.value = Math.min(MAX_FISH, parseInt(fishRange.value,10)+1);
   fishRangeOut.value = fishRange.value;
 });
 removeBtn.addEventListener('click', () => {
@@ -496,10 +552,7 @@ fishRange.addEventListener('input', () => {
   else if (diff < 0) fishes.splice(diff);
 });
 
-// Responsive: when resizing, reposition some fishes inside bounds
-window.addEventListener('resize', () => {
-  fishes.forEach(f => {
-    f.pos.y = clamp(f.pos.y, 40, H-120);
-    f.pos.x = clamp(f.pos.x, -60, W+60);
-  });
+// ensure resize sets new DPR & sizes immediately on load/orientation change
+window.addEventListener('orientationchange', () => {
+  setTimeout(resize, 200);
 });
