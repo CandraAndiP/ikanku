@@ -1,8 +1,7 @@
-// Akuarium Realistis - Mobile-friendly improvements
-// - capped devicePixelRatio for mobile to reduce GPU/CPU
-// - touch support (tap to drop food)
-// - performance caps (max particles) and reduced defaults for small screens
-// - visibility pause to avoid wasting CPU when backgrounded
+// Akuarium Realistis - Mobile-friendly UI fixes + fish count feature
+// - Fix bubble toggle label wrapping/clipping on mobile
+// - Add explicit mobile-friendly "jumlah ikan" +/- controls that sync with range
+// - Keep existing behavior and caps
 
 const canvasBg = document.getElementById('canvas-bg');
 const canvasMain = document.getElementById('canvas-main');
@@ -18,6 +17,10 @@ const toggleBubblesBtn = document.getElementById('toggleBubbles');
 const fishRange = document.getElementById('fishCount');
 const fishRangeOut = document.getElementById('fishCountOut');
 
+const fishMinus = document.getElementById('fishMinus');
+const fishPlus = document.getElementById('fishPlus');
+const fishCountDisplay = document.getElementById('fishCountDisplay');
+
 let W = 0, H = 0;
 let devicePR = Math.max(1, window.devicePixelRatio || 1);
 let isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 700;
@@ -25,7 +28,6 @@ let DPR_CAP = isMobile ? 1.5 : 2; // cap on mobile to avoid huge offscreen buffe
 let DPR = Math.min(devicePR, DPR_CAP);
 let resizeTimeout = null;
 function resize() {
-  // debounce to avoid thrashing on mobile resize/rotation
   clearTimeout(resizeTimeout);
   resizeTimeout = setTimeout(() => {
     W = window.innerWidth; H = window.innerHeight;
@@ -40,16 +42,7 @@ function resize() {
       const cc = c.getContext('2d');
       cc.setTransform(DPR,0,0,DPR,0,0);
     });
-    // if mobile, reduce default fish count
-    if (isMobile && parseInt(fishRange.value,10) > 12) {
-      fishRange.value = 6;
-      fishRangeOut.value = 6;
-    }
-    // clamp existing fishes y positions
-    fishes.forEach(f => {
-      f.pos.y = clamp(f.pos.y, 40, H-120);
-      f.pos.x = clamp(f.pos.x, -60, W+60);
-    });
+    // adjust UI visibility classes (handled by CSS media queries)
   }, 80);
 }
 window.addEventListener('resize', resize);
@@ -57,7 +50,7 @@ resize();
 
 // Settings
 let BUBBLES_ON = true;
-let CAUSTICS = true; // but trimmed on mobile
+let CAUSTICS = true;
 let running = true;
 
 // Utility
@@ -65,17 +58,15 @@ const rand = (a,b) => Math.random()*(b-a)+a;
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const dist = (a,b,c,d) => Math.hypot(a-c, b-d);
 
-// Simulation lists & caps
+// Simulation props & caps
 let fishes = [];
 let bubbles = [];
 let foods = [];
 let ripples = [];
 let last = performance.now();
-const MAX_BUBBLES = isMobile ? 60 : 140;
-const MAX_FOODS = isMobile ? 8 : 18;
 const MAX_FISH = 40;
 
-// Colors / species (same)
+// Basic species/colors
 const SPECIES = [
   { body:'#ffb37a', accent:'#ff7a4d', size:1.0, speed:1.0 },
   { body:'#7fd3ff', accent:'#3faeea', size:0.9, speed:1.05 },
@@ -84,7 +75,7 @@ const SPECIES = [
   { body:'#8effa6', accent:'#3ecf7a', size:0.85, speed:1.2 },
 ];
 
-// Fish class simplified (same as before but neighbor radius depends on screen)
+// Fish class (kept from previous)
 class Fish {
   constructor(x,y, species=null){
     this.pos = { x: x ?? rand(0, W), y: y ?? rand(50, H-150) };
@@ -122,7 +113,6 @@ class Fish {
         steerY += ny * this.speed * 1.8;
       }
     } else {
-      // neighbor radius scales with screen and mobile
       let baseRadius = Math.max(40, Math.min(90, W * 0.08));
       let neighRadius = baseRadius * (0.9 + this.depth * 1.1);
       let sepX=0, sepY=0, aliX=0, aliY=0, cohX=0, cohY=0;
@@ -227,7 +217,7 @@ class Fish {
   setTarget(food) { this.targetFood = food; }
 }
 
-// Bubble, Food, Ripple classes (Food has slower fall & wobble)
+// Bubble, Food, Ripple (unchanged behaviors from previous)
 class Bubble {
   constructor(x,y,size=8, depth=0.8){
     this.x = x; this.y = y; this.r = size; this.depth = depth;
@@ -264,7 +254,6 @@ class Bubble {
 class Food {
   constructor(x,y, vx = 0){
     this.x = x; this.y = y;
-    // slower fall on mobile & more random
     const baseSlow = isMobile ? rand(8,20) : rand(12,28);
     this.vy = baseSlow;
     this.vx = vx + rand(-8, 8);
@@ -321,7 +310,7 @@ class Ripple {
   }
 }
 
-// spawn helpers with safe caps
+// spawn helpers
 function spawnFish(n=1){
   const allowed = Math.max(0, Math.min(n, MAX_FISH - fishes.length));
   for (let i=0;i<allowed;i++){
@@ -329,20 +318,17 @@ function spawnFish(n=1){
     fishes.push(f);
   }
 }
-
 function spawnBubble(x, y, size=10, depth=0.8){
   if (!BUBBLES_ON) return;
   if (bubbles.length > (isMobile ? 80 : 180)) return;
   const b = new Bubble(x, y, size, depth);
   bubbles.push(b);
 }
-
 function spawnBubbleCluster(x, y, count=6){
   for (let i=0;i<count;i++){
     setTimeout(() => spawnBubble(x+rand(-20,20), y+rand(-10,10), rand(6, 18), rand(0.3, 1.0)), i*80);
   }
 }
-
 function dropFood(x,y, vx = 0){
   if (foods.length >= (isMobile ? 8 : 18)) return;
   const f = new Food(x, y - 8, vx);
@@ -350,9 +336,9 @@ function dropFood(x,y, vx = 0){
   spawnBubbleCluster(x, y, 4);
 }
 
-// add-food button: now spawns from more random positions across top, staggered
+// add-food button action
 function addFoodButtonAction(){
-  const count = 4 + Math.floor(rand(2,6)); // fewer on mobile
+  const count = isMobile ? (3 + Math.floor(rand(0,3))) : (4 + Math.floor(rand(2,6)));
   for (let i=0;i<count;i++){
     const x = clamp(rand(20, W-20) + (Math.random() < 0.35 ? rand(-80,80) : 0), 20, W-20);
     const y = clamp(rand(H*0.06, H*0.18) + rand(-8,8), 12, H*0.25);
@@ -361,7 +347,7 @@ function addFoodButtonAction(){
   }
 }
 
-// caustics: reduce complexity on mobile
+// caustics (simplified on mobile)
 let causticOffset = 0;
 function drawCaustics(ctx, dt){
   if (!CAUSTICS) return;
@@ -397,7 +383,7 @@ function drawCaustics(ctx, dt){
   ctx.restore();
 }
 
-// pause when document not visible
+// pause when document hidden
 document.addEventListener('visibilitychange', () => {
   running = !document.hidden;
   if (!running) return;
@@ -416,7 +402,6 @@ function step(now){
 
   drawCaustics(ctxBg, dt);
 
-  // assign food targets
   for (const fish of fishes) {
     if (fish.targetFood && fish.targetFood.eaten) fish.targetFood = null;
   }
@@ -436,7 +421,7 @@ function step(now){
   foods.forEach(f => f.update(dt));
   ripples.forEach(r => r.update(dt));
 
-  // caps & cleanup
+  // cleanup & caps
   if (bubbles.length > (isMobile ? 80 : 180)) bubbles.splice(0, bubbles.length - (isMobile ? 80 : 180));
   if (foods.length > (isMobile ? 10 : 20)) foods.splice(0, foods.length - (isMobile ? 10 : 20));
   bubbles = bubbles.filter(b => !b.dead);
@@ -445,7 +430,6 @@ function step(now){
 
   ctx.clearRect(0,0,W,H);
 
-  // fog layer
   ctx.save();
   const fog = ctx.createLinearGradient(0,0,0,H);
   fog.addColorStop(0, 'rgba(255,255,255,0.02)');
@@ -491,7 +475,6 @@ aquarium.addEventListener('click', (e) => {
   const y = e.clientY - rect.top;
   handlePointerDrop(x, y);
 });
-// touchstart (use passive:false for preventing default if needed)
 aquarium.addEventListener('touchstart', (ev) => {
   if (!ev.touches || ev.touches.length === 0) return;
   const t = ev.touches[0];
@@ -501,10 +484,74 @@ aquarium.addEventListener('touchstart', (ev) => {
   handlePointerDrop(x, y);
 }, { passive: true });
 
-// Add-food button action
+// UI wiring
+addBtn.addEventListener('click', () => {
+  spawnFish(1);
+  syncFishCountUI(1);
+});
+removeBtn.addEventListener('click', () => {
+  fishes.pop();
+  syncFishCountUI(-1);
+});
+toggleBubblesBtn.addEventListener('click', () => {
+  BUBBLES_ON = !BUBBLES_ON;
+  toggleBubblesBtn.textContent = `Gelembung: ${BUBBLES_ON ? 'On' : 'Off'}`;
+});
+
+// Range control (desktop)
+if (fishRange) {
+  fishRange.addEventListener('input', () => {
+    const val = parseInt(fishRange.value,10);
+    const current = fishes.length;
+    const diff = val - current;
+    if (diff > 0) spawnFish(diff);
+    else if (diff < 0) fishes.splice(diff);
+    fishRangeOut.value = val;
+    updateFishCountDisplay();
+  });
+}
+
+// Mobile +/- controls
+function syncFishCountUI(delta = 0){
+  // delta: +/- applied by add/remove buttons
+  // Keep range & mobile display in sync
+  if (delta > 0) {
+    fishRange.value = Math.min(MAX_FISH, parseInt(fishRange.value || 1,10) + delta);
+  } else if (delta < 0) {
+    fishRange.value = Math.max(1, parseInt(fishRange.value || 1,10) + delta);
+  } else {
+    // no-op
+  }
+  fishRangeOut.value = fishRange.value;
+  updateFishCountDisplay();
+}
+
+function updateFishCountDisplay(){
+  const val = parseInt(fishRange.value || 1, 10);
+  fishCountDisplay.textContent = String(val);
+  // ensure fishes count matches value
+  const diff = val - fishes.length;
+  if (diff > 0) spawnFish(diff);
+  else if (diff < 0) fishes.splice(diff);
+}
+
+fishMinus.addEventListener('click', () => {
+  const cur = Math.max(1, parseInt(fishRange.value || 1,10));
+  if (cur <= 1) return;
+  fishRange.value = cur - 1;
+  updateFishCountDisplay();
+});
+fishPlus.addEventListener('click', () => {
+  const cur = Math.min(MAX_FISH, parseInt(fishRange.value || 1,10));
+  if (cur >= MAX_FISH) return;
+  fishRange.value = cur + 1;
+  updateFishCountDisplay();
+});
+
+// Add-food button
 addFoodBtn.addEventListener('click', () => addFoodButtonAction());
 
-// automatic bubble columns, staggered, but lighter on mobile
+// bubble columns
 setInterval(() => {
   if (!BUBBLES_ON) return;
   const x = rand(30, W-30);
@@ -512,14 +559,15 @@ setInterval(() => {
   spawnBubbleCluster(x, H-80, cluster);
 }, 1400 + Math.random()*1200);
 
-// initial population & defaults
+// init
 function init(){
   // default fish count smaller on mobile
-  const defaultCount = isMobile ? 6 : parseInt(fishRange.value,10) || 12;
+  const defaultCount = isMobile ? 6 : (parseInt(fishRange.value,10) || 12);
   fishRange.value = defaultCount;
-  fishRangeOut.value = defaultCount;
+  if (fishRangeOut) fishRangeOut.value = defaultCount;
+  fishCountDisplay.textContent = String(defaultCount);
   spawnFish(defaultCount);
-  // lighter initial bubbles on mobile
+
   const initialBubbles = isMobile ? 12 : 30;
   for (let i=0;i<initialBubbles;i++){
     spawnBubble(rand(0,W), rand(H-60, H), rand(4, 18), rand(0.3, 1.0));
@@ -529,30 +577,7 @@ function init(){
 }
 init();
 
-// UI bindings
-addBtn.addEventListener('click', () => {
-  spawnFish(1);
-  fishRange.value = Math.min(MAX_FISH, parseInt(fishRange.value,10)+1);
-  fishRangeOut.value = fishRange.value;
-});
-removeBtn.addEventListener('click', () => {
-  fishes.pop();
-  fishRange.value = Math.max(1, parseInt(fishRange.value)-1);
-  fishRangeOut.value = fishRange.value;
-});
-toggleBubblesBtn.addEventListener('click', () => {
-  BUBBLES_ON = !BUBBLES_ON;
-  toggleBubblesBtn.textContent = `Gelembung: ${BUBBLES_ON ? 'On' : 'Off'}`;
-});
-fishRange.addEventListener('input', () => {
-  const val = parseInt(fishRange.value,10);
-  fishRangeOut.value = val;
-  const diff = val - fishes.length;
-  if (diff > 0) spawnFish(diff);
-  else if (diff < 0) fishes.splice(diff);
-});
-
-// ensure resize sets new DPR & sizes immediately on load/orientation change
+// ensure orientation resize adjusts DPR and sizes
 window.addEventListener('orientationchange', () => {
   setTimeout(resize, 200);
 });

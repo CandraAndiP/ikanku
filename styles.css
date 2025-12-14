@@ -5,25 +5,57 @@
   --control-bg: rgba(255,255,255,0.06);
   --glass: rgba(255,255,255,0.06);
   --control-gap: 8px;
+  --control-padding: 10px;
 }
 
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; -webkit-tap-highlight-color: rgba(0,0,0,0)}
 .controls{
-  position:fixed; z-index:160; left:12px; top:12px; display:flex; gap:var(--control-gap); align-items:center;
-  background:var(--control-bg); padding:8px; border-radius:10px; color:#fff;
+  position:fixed; z-index:160; left:12px; right:12px; top:auto; bottom:12px;
+  display:flex; gap:var(--control-gap); align-items:center;
+  background:var(--control-bg); padding:var(--control-padding); border-radius:12px; color:#fff;
   backdrop-filter: blur(6px); border:1px solid rgba(255,255,255,0.05);
+  /* make controls wrap and not be clipped on small screens */
+  flex-wrap:wrap;
+  justify-content:space-between;
+  max-width: calc(100% - 24px);
+  box-shadow: 0 6px 18px rgba(3,12,30,0.35);
+  /* safe area for iOS bottom inset */
+  padding-bottom: calc(var(--control-padding) + env(safe-area-inset-bottom));
 }
-.controls button{padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:transparent; color:inherit; cursor:pointer; font-size:14px}
-.controls .range{display:flex; align-items:center; gap:8px; font-size:13px}
-.controls input[type="range"]{width:120px}
-.controls output{color:#fff}
 
-/* better hit targets on mobile */
+/* row container to keep related controls together */
+.controls-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+/* buttons */
+.controls button{
+  padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.06);
+  background:transparent; color:inherit; cursor:pointer; font-size:14px;
+  white-space:normal; /* allow wrapping text when needed */
+  min-width:44px;
+}
+
+/* small square buttons for + / - */
+button.small{ padding:6px 10px; min-width:36px; font-size:18px; line-height:1; }
+
+/* fish count (mobile) */
+.fish-count{ display:flex; align-items:center; gap:6px; background: rgba(255,255,255,0.02); padding:4px 6px; border-radius:8px; }
+.fish-count .count{ min-width:36px; text-align:center; font-weight:600; font-size:15px; color:#fff; }
+
+/* desktop-only / mobile-only helpers */
+.desktop-only{ display:flex; align-items:center; gap:6px; }
+.mobile-only{ display:none; }
+
+/* make toggle button wrap instead of being cut */
+.controls button.wrap{ max-width:160px; word-break:break-word; }
+
+/* hide range on very small screens; we'll use mobile +/- controls */
 @media (max-width:700px){
-  .controls{ left: 8px; right:8px; top:auto; bottom:12px; padding:10px; justify-content:space-between; gap:10px; }
-  .controls button{ padding:12px 14px; font-size:15px; }
-  .controls .range{ display:none } /* hide slider on small screens to save space */
+  .desktop-only{ display:none; }
+  .mobile-only{ display:flex; }
+  .controls{ left:8px; right:8px; bottom:12px; padding:12px; gap:10px; }
+  .controls button{ padding:10px 12px; font-size:15px; }
+  .controls .range{ display:none; } /* redundant */
 }
 
 /* Aquarium container */
