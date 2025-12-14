@@ -1,7 +1,5 @@
-// Akuarium Realistis - Mobile-friendly UI fixes + fish count feature
-// - Fix bubble toggle label wrapping/clipping on mobile
-// - Add explicit mobile-friendly "jumlah ikan" +/- controls that sync with range
-// - Keep existing behavior and caps
+// Akuarium Realistis - Update UI: hapus tombol tambah/kurangi ikan, + / - jadi kontrol utama
+// Script menyesuaikan: tidak ada referensi ke tombol yang dihapus
 
 const canvasBg = document.getElementById('canvas-bg');
 const canvasMain = document.getElementById('canvas-main');
@@ -10,13 +8,10 @@ const ctxBg = canvasBg.getContext('2d', { alpha: true });
 const ctx = canvasMain.getContext('2d', { alpha: true });
 const ctxR = canvasRipples.getContext('2d', { alpha: true });
 
-const addBtn = document.getElementById('addFish');
-const removeBtn = document.getElementById('removeFish');
 const addFoodBtn = document.getElementById('addFoodBtn');
 const toggleBubblesBtn = document.getElementById('toggleBubbles');
 const fishRange = document.getElementById('fishCount');
 const fishRangeOut = document.getElementById('fishCountOut');
-
 const fishMinus = document.getElementById('fishMinus');
 const fishPlus = document.getElementById('fishPlus');
 const fishCountDisplay = document.getElementById('fishCountDisplay');
@@ -24,7 +19,7 @@ const fishCountDisplay = document.getElementById('fishCountDisplay');
 let W = 0, H = 0;
 let devicePR = Math.max(1, window.devicePixelRatio || 1);
 let isMobile = /Mobi|Android/i.test(navigator.userAgent) || window.innerWidth < 700;
-let DPR_CAP = isMobile ? 1.5 : 2; // cap on mobile to avoid huge offscreen buffers
+let DPR_CAP = isMobile ? 1.5 : 2;
 let DPR = Math.min(devicePR, DPR_CAP);
 let resizeTimeout = null;
 function resize() {
@@ -42,23 +37,20 @@ function resize() {
       const cc = c.getContext('2d');
       cc.setTransform(DPR,0,0,DPR,0,0);
     });
-    // adjust UI visibility classes (handled by CSS media queries)
   }, 80);
 }
 window.addEventListener('resize', resize);
 resize();
 
-// Settings
+// Settings & utilities
 let BUBBLES_ON = true;
 let CAUSTICS = true;
 let running = true;
-
-// Utility
 const rand = (a,b) => Math.random()*(b-a)+a;
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const dist = (a,b,c,d) => Math.hypot(a-c, b-d);
 
-// Simulation props & caps
+// Simulation lists & caps
 let fishes = [];
 let bubbles = [];
 let foods = [];
@@ -66,7 +58,7 @@ let ripples = [];
 let last = performance.now();
 const MAX_FISH = 40;
 
-// Basic species/colors
+// Species/colors (unchanged)
 const SPECIES = [
   { body:'#ffb37a', accent:'#ff7a4d', size:1.0, speed:1.0 },
   { body:'#7fd3ff', accent:'#3faeea', size:0.9, speed:1.05 },
@@ -75,7 +67,9 @@ const SPECIES = [
   { body:'#8effa6', accent:'#3ecf7a', size:0.85, speed:1.2 },
 ];
 
-// Fish class (kept from previous)
+// Fish, Bubble, Food, Ripple classes... (sama seperti sebelumnya)
+// For brevity I'll reuse the same classes as before (copy-paste from previous version).
+// --- Fish class ---
 class Fish {
   constructor(x,y, species=null){
     this.pos = { x: x ?? rand(0, W), y: y ?? rand(50, H-150) };
@@ -217,7 +211,7 @@ class Fish {
   setTarget(food) { this.targetFood = food; }
 }
 
-// Bubble, Food, Ripple (unchanged behaviors from previous)
+// Bubble, Food, Ripple (sama seperti sebelumnya)
 class Bubble {
   constructor(x,y,size=8, depth=0.8){
     this.x = x; this.y = y; this.r = size; this.depth = depth;
@@ -391,7 +385,7 @@ document.addEventListener('visibilitychange', () => {
   requestAnimationFrame(step);
 });
 
-// main loop
+// main loop (sama seperti sebelumnya)
 function step(now){
   if (!running) {
     requestAnimationFrame(step);
@@ -421,7 +415,6 @@ function step(now){
   foods.forEach(f => f.update(dt));
   ripples.forEach(r => r.update(dt));
 
-  // cleanup & caps
   if (bubbles.length > (isMobile ? 80 : 180)) bubbles.splice(0, bubbles.length - (isMobile ? 80 : 180));
   if (foods.length > (isMobile ? 10 : 20)) foods.splice(0, foods.length - (isMobile ? 10 : 20));
   bubbles = bubbles.filter(b => !b.dead);
@@ -484,21 +477,7 @@ aquarium.addEventListener('touchstart', (ev) => {
   handlePointerDrop(x, y);
 }, { passive: true });
 
-// UI wiring
-addBtn.addEventListener('click', () => {
-  spawnFish(1);
-  syncFishCountUI(1);
-});
-removeBtn.addEventListener('click', () => {
-  fishes.pop();
-  syncFishCountUI(-1);
-});
-toggleBubblesBtn.addEventListener('click', () => {
-  BUBBLES_ON = !BUBBLES_ON;
-  toggleBubblesBtn.textContent = `Gelembung: ${BUBBLES_ON ? 'On' : 'Off'}`;
-});
-
-// Range control (desktop)
+// UI wiring (without add/remove buttons)
 if (fishRange) {
   fishRange.addEventListener('input', () => {
     const val = parseInt(fishRange.value,10);
@@ -509,30 +488,6 @@ if (fishRange) {
     fishRangeOut.value = val;
     updateFishCountDisplay();
   });
-}
-
-// Mobile +/- controls
-function syncFishCountUI(delta = 0){
-  // delta: +/- applied by add/remove buttons
-  // Keep range & mobile display in sync
-  if (delta > 0) {
-    fishRange.value = Math.min(MAX_FISH, parseInt(fishRange.value || 1,10) + delta);
-  } else if (delta < 0) {
-    fishRange.value = Math.max(1, parseInt(fishRange.value || 1,10) + delta);
-  } else {
-    // no-op
-  }
-  fishRangeOut.value = fishRange.value;
-  updateFishCountDisplay();
-}
-
-function updateFishCountDisplay(){
-  const val = parseInt(fishRange.value || 1, 10);
-  fishCountDisplay.textContent = String(val);
-  // ensure fishes count matches value
-  const diff = val - fishes.length;
-  if (diff > 0) spawnFish(diff);
-  else if (diff < 0) fishes.splice(diff);
 }
 
 fishMinus.addEventListener('click', () => {
@@ -548,8 +503,23 @@ fishPlus.addEventListener('click', () => {
   updateFishCountDisplay();
 });
 
+function updateFishCountDisplay(){
+  const val = parseInt(fishRange.value || 1, 10);
+  fishCountDisplay.textContent = String(val);
+  // ensure fishes count matches value
+  const diff = val - fishes.length;
+  if (diff > 0) spawnFish(diff);
+  else if (diff < 0) fishes.splice(diff);
+}
+
 // Add-food button
 addFoodBtn.addEventListener('click', () => addFoodButtonAction());
+
+// toggle bubbles
+toggleBubblesBtn.addEventListener('click', () => {
+  BUBBLES_ON = !BUBBLES_ON;
+  toggleBubblesBtn.textContent = `Gelembung: ${BUBBLES_ON ? 'On' : 'Off'}`;
+});
 
 // bubble columns
 setInterval(() => {
@@ -561,7 +531,6 @@ setInterval(() => {
 
 // init
 function init(){
-  // default fish count smaller on mobile
   const defaultCount = isMobile ? 6 : (parseInt(fishRange.value,10) || 12);
   fishRange.value = defaultCount;
   if (fishRangeOut) fishRangeOut.value = defaultCount;
@@ -577,7 +546,7 @@ function init(){
 }
 init();
 
-// ensure orientation resize adjusts DPR and sizes
+// orientation resize
 window.addEventListener('orientationchange', () => {
   setTimeout(resize, 200);
 });

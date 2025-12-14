@@ -23,10 +23,7 @@
     <!-- Kontrol disusun ke dalam 3 grup: left / center / right -->
     <div class="controls-inner">
       <div class="group group-left">
-        <button id="addFish" class="primary">Tambah Ikan</button>
-        <button id="removeFish">Kurangi Ikan</button>
-
-        <!-- Desktop range -->
+        <!-- Hapus tombol tambah/kurangi ikan biasa; gunakan + / - atau slider -->
         <label class="range desktop-only" aria-hidden="false">
           <span class="label">Jumlah</span>
           <input id="fishCount" type="range" min="1" max="40" value="12">
@@ -34,11 +31,14 @@
         </label>
 
         <!-- Mobile +/- controls -->
-        <div class="fish-count mobile-only" aria-hidden="true" title="Jumlah ikan">
-          <button id="fishMinus" class="small">−</button>
-          <div id="fishCountDisplay" class="count">12</div>
-          <button id="fishPlus" class="small">+</button>
+        <div class="fish-count mobile-only group-center" aria-hidden="true" title="Jumlah ikan">
+          <button id="fishMinus" class="small" aria-label="Kurangi ikan">−</button>
+          <div id="fishCountDisplay" class="count" aria-live="polite">12</div>
+          <button id="fishPlus" class="small" aria-label="Tambah ikan">+</button>
         </div>
+
+        <!-- Keterangan singkat -->
+        <div class="note group group-center">Gunakan tombol + / − untuk mengatur jumlah ikan</div>
       </div>
 
       <div class="group group-center">

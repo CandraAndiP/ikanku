@@ -41,13 +41,13 @@ button{cursor:pointer}
   flex-wrap:wrap;
 }
 
-/* make center group centered and not too wide */
+/* center group */
 .group-center{ justify-content:center; flex: 0 1 auto; }
 
-/* left group can shrink */
+/* left group */
 .group-left{ flex: 1 1 auto; min-width:0; align-items:center; }
 
-/* right group reserved */
+/* right group */
 .group-right{ flex: 0 0 auto; align-items:center; }
 
 /* Buttons */
@@ -72,6 +72,9 @@ button.small{ padding:6px 10px; min-width:36px; font-size:18px; line-height:1; b
 /* range styling (desktop) */
 .range{ display:flex; gap:8px; align-items:center; color:#fff; }
 .range input[type="range"]{ width:140px; height:28px; }
+
+/* note text */
+.note{ color: rgba(255,255,255,0.85); font-size:13px; margin-left:8px; opacity:0.95; }
 
 /* helpers */
 .desktop-only{ display:flex; }
